@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p/>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p/>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -24,10 +24,10 @@ import groovy.lang.Binding;
 import org.apache.flume.Context;
 import org.apache.flume.Event;
 import org.apache.flume.interceptor.Interceptor;
-import org.apache.flume.interceptor.StaticInterceptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.util.List;
 
 import static com.supermy.flume.interceptor.RuleFilteringInterceptor.Constants.*;
@@ -95,151 +95,150 @@ import static com.supermy.flume.interceptor.RuleFilteringInterceptor.Constants.*
  */
 public class RuleFilteringInterceptor implements Interceptor {
 
-  private static final Logger logger = LoggerFactory
-      .getLogger(RuleFilteringInterceptor.class);
+    private static final Logger logger = LoggerFactory
+            .getLogger(RuleFilteringInterceptor.class);
 
-  private final String rule;
-  private final String rulename;
+    private final String rule; //groovy file
+    private final String rulename;
 
-  private final boolean excludeEvents;
+    private final boolean excludeEvents;
 
-  /**
-   * Only {@link RuleFilteringInterceptor.Builder} can build me
-   */
-  private RuleFilteringInterceptor(String rule,String rulename, boolean excludeEvents) {
+    /**
+     * Only {@link RuleFilteringInterceptor.Builder} can build me
+     */
+    private RuleFilteringInterceptor(String rule, String rulename, boolean excludeEvents) {
 
-    this.rule = rule;
-    this.rulename = rulename;
-    this.excludeEvents = excludeEvents;
-  }
-
-  @Override
-  public void initialize() {
-    // no-op
-  }
-
-
-  @Override
-  /**
-   * Returns the event if it passes the regular expression filter and null
-   * otherwise.
-   *
-   * 单个event拦截逻辑
-   *
-   */
-  public Event intercept(Event event) {
-    // We've already ensured here that at most one of includeRegex and
-    // excludeRegex are defined.
-    // 调用脚本规则进行判定 groovy
-
-    //输入参数
-    Binding binding = new Binding();
-    binding.setVariable("body", new String(event.getBody()));
-    binding.setVariable("head", event.getHeaders());
-
-    System.out.println(String.format(
-            "flume 的值:  body=%s,head=%s",
-            new String(event.getBody()), event.getHeaders()));
-
-    System.out.println(String.format(
-            "flume 配置参数:  rule=%s,rulename=%s",
-            rule, rulename));
-
-
-    boolean result = (Boolean) GroovyShellJsonExample.getShell(rulename, rule, binding);
-
-    if (!excludeEvents) {
-      //if (regex.matcher(new String(event.getBody())).find()) {// TODO: 16/12/14
-      if (result) {
-        return event;
-      }
-      else {
-        return null;
-      }
-    }
-    else {
-      //if (regex.matcher(new String(event.getBody())).find()) {// TODO: 16/12/14
-      if (result) {// TODO: 16/12/14
-        return null;
-      }
-      else {
-        return event;
-      }
-    }
-  }
-
-  /**
-   * Returns the set of events which pass filters, according to
-   * 批量event拦截逻辑
-   * {@link #intercept(Event)}.
-   * @param events
-   * @return
-   */
-  @Override
-  public List<Event> intercept(List<Event> events) {
-    List<Event> out = Lists.newArrayList();
-    for (Event event : events) {
-      Event outEvent = intercept(event);
-      if (outEvent != null) { out.add(outEvent); }
-    }
-    return out;
-  }
-
-  @Override
-  public void close() {
-    // no-op
-  }
-
-  /**
-   * Builder which builds new instance of the StaticInterceptor.
-   * 相当于自定义Interceptor的工厂类
-   * 在flume采集配置文件中通过制定该Builder来创建Interceptor对象
-   * 可以在Builder中获取、解析flume采集配置文件中的拦截器Interceptor的自定义参数：
-   * 字段分隔符，字段下标，下标分隔符、加密字段下标 ...等
-   *
-   */
-  public static class Builder implements Interceptor.Builder {
-
-    private String rule;
-    private String rulename;
-    private boolean excludeEvents;
-
-    @Override
-    public void configure(Context context) {
-      String ruleString = context.getString(RULE, DEFAULT_RULE);
-      String ruleNameString = context.getString(RULE_NAME, DEFAUNLT_RULE_NAME);
-
-      //rule = Pattern.compile(ruleString); //// TODO: 16/12/14  groovy 脚本替换
-      rule=ruleString;
-      rulename=ruleNameString;
-
-      excludeEvents = context.getBoolean(EXCLUDE_EVENTS,
-          DEFAULT_EXCLUDE_EVENTS);
+        this.rule = rule;
+        this.rulename = rulename;
+        this.excludeEvents = excludeEvents;
     }
 
     @Override
-    public Interceptor build() {
-      logger.info(String.format(
-          "Creating RegexFilteringInterceptor: rule=%s,rulename=%s,excludeEvents=%s",
-          rule, rulename, excludeEvents));
-      return new RuleFilteringInterceptor(rule,rulename, excludeEvents);
+    public void initialize() {
+        // no-op
     }
-  }
-
-  /**
-   * 常量
-   */
-  public static class Constants {
-
-    public static final String RULE = "rule";
-    public static final String RULE_NAME = "ruleName";
-
-    public static final String DEFAULT_RULE = ".*";
-    public static final String DEFAUNLT_RULE_NAME = "filterRule";
 
 
-    public static final String EXCLUDE_EVENTS = "excludeEvents";
-    public static final boolean DEFAULT_EXCLUDE_EVENTS = false;
-  }
+    @Override
+    /**
+     * Returns the event if it passes the regular expression filter and null
+     * otherwise.
+     *
+     * 单个event拦截逻辑
+     *
+     */
+    public Event intercept(Event event) {
+        // We've already ensured here that at most one of includeRegex and
+        // excludeRegex are defined.
+        // 调用脚本规则进行判定 groovy
+
+        //输入参数
+        Binding binding = new Binding();
+        binding.setVariable("body", new String(event.getBody()));
+        binding.setVariable("head", event.getHeaders());
+
+        System.out.println(String.format(
+                "flume 的值:  body=%s,head=%s",
+                new String(event.getBody()), event.getHeaders()));
+
+        System.out.println(String.format(
+                "flume 配置参数:  rule=%s,rulename=%s",
+                rule, rulename));
+
+        File f =new File(rule);
+        boolean result = (Boolean) GroovyShellJsonExample.getShell(rulename+f.lastModified(), f, binding);
+
+        if (!excludeEvents) {
+            //if (regex.matcher(new String(event.getBody())).find()) {// TODO: 16/12/14
+            if (result) {
+                return event;
+            } else {
+                return null;
+            }
+        } else {
+            //if (regex.matcher(new String(event.getBody())).find()) {// TODO: 16/12/14
+            if (result) {// TODO: 16/12/14
+                return null;
+            } else {
+                return event;
+            }
+        }
+    }
+
+    /**
+     * Returns the set of events which pass filters, according to
+     * 批量event拦截逻辑
+     * {@link #intercept(Event)}.
+     * @param events
+     * @return
+     */
+    @Override
+    public List<Event> intercept(List<Event> events) {
+        List<Event> out = Lists.newArrayList();
+        for (Event event : events) {
+            Event outEvent = intercept(event);
+            if (outEvent != null) {
+                out.add(outEvent);
+            }
+        }
+        return out;
+    }
+
+    @Override
+    public void close() {
+        // no-op
+    }
+
+    /**
+     * Builder which builds new instance of the StaticInterceptor.
+     * 相当于自定义Interceptor的工厂类
+     * 在flume采集配置文件中通过制定该Builder来创建Interceptor对象
+     * 可以在Builder中获取、解析flume采集配置文件中的拦截器Interceptor的自定义参数：
+     * 字段分隔符，字段下标，下标分隔符、加密字段下标 ...等
+     *
+     */
+    public static class Builder implements Interceptor.Builder {
+
+        private String rule;
+        private String rulename;
+        private boolean excludeEvents;
+
+        @Override
+        public void configure(Context context) {
+            String ruleString = context.getString(RULE, DEFAULT_RULE);
+            String ruleNameString = context.getString(RULE_NAME, DEFAUNLT_RULE_NAME);
+
+            //rule = Pattern.compile(ruleString); //// TODO: 16/12/14  groovy 脚本替换
+            rule = ruleString;
+            rulename = ruleNameString;
+
+            excludeEvents = context.getBoolean(EXCLUDE_EVENTS,
+                    DEFAULT_EXCLUDE_EVENTS);
+        }
+
+        @Override
+        public Interceptor build() {
+            logger.info(String.format(
+                    "Creating RegexFilteringInterceptor: rule=%s,rulename=%s,excludeEvents=%s",
+                    rule, rulename, excludeEvents));
+            return new RuleFilteringInterceptor(rule, rulename, excludeEvents);
+        }
+    }
+
+    /**
+     * 常量
+     */
+    public static class Constants {
+
+        public static final String RULE = "rule";
+        public static final String RULE_NAME = "ruleName";
+
+        public static final String DEFAULT_RULE = ".*";
+        public static final String DEFAUNLT_RULE_NAME = "filterRule";
+
+
+        public static final String EXCLUDE_EVENTS = "excludeEvents";
+        public static final boolean DEFAULT_EXCLUDE_EVENTS = false;
+    }
 
 }
