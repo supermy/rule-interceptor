@@ -1,4 +1,8 @@
 # key-switch
+2016-01-03
+    更改项目名称；
+    
+    
 2016-12-16 完成flume 正则拦截器的替换
 
 Search and Replace Interceptor；--> RuleSearchAndReplaceInterceptor$Builder
