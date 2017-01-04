@@ -14,6 +14,4 @@ println p2;
 
 
 
-
-
 return object.name == 'James Mo';

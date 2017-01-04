@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/rule-filter-interceptor.iml" filepath="$PROJECT_DIR$/rule-filter-interceptor.iml" />
+      <module fileurl="file://$PROJECT_DIR$/rule-interceptor.iml" filepath="$PROJECT_DIR$/rule-interceptor.iml" />
     </modules>
   </component>
 </project>
