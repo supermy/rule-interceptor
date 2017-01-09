@@ -1,6 +1,8 @@
 # flume-interceptor-ex
 
 [![Build Status]()
+[![Build Status](https://travis-ci.org/redis/hiredis-rb.svg?branch=master)](https://github.com/supermy/rule-interceptor)
+https://travis-ci.org/supermy/rule-interceptor
 
 flume 全能版本拦截器 [flume-rule-interceptor](https://github.com/supermy/rule-interceptor). groovy 作为规则dsl,通过groovy 脚本编写逻辑，支持JSON 格式函数，脚本动态加载，灰度发布。
 
