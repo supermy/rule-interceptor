@@ -1,59 +1,96 @@
-# key-switch
-2016-01-03
-    更改项目名称；
+# flume-interceptor-ex
+
+[![Build Status]()
+
+flume 全能版本拦截器 [flume-rule-interceptor](https://github.com/supermy/rule-interceptor). groovy 作为规则dsl,通过groovy 脚本编写逻辑，支持JSON 格式函数，脚本动态加载，灰度发布。
+
+业务场景1：RuleSearchAndReplaceInterceptor， 互联网算进行数据传输的安全，通过拦截器进行加密解密；官方原有的正则不能实现此功能。
+
+业务场景2：RuleFilteringInterceptor， 数据条件过滤，可以通过groovy 脚本进行条件过滤，非常灵活；官方原有的正则不支持条件。
+
+业务场景3：RuleSearchAndReplaceInterceptor，数据格式变更，可以通过groovy 脚本进行数据格式转换；官方可以通过正则完成，效率较低。
+
+业务场景3：RuleSearchAndReplaceInterceptor，定制head 属性，可以通过groovy 脚本配置head 属性；官方配置较为复杂，不能支持灵活业务。
+
+
+## Install
+
+安装:
+
+    打包rule-interceptor-1.0-SNAPSHOT.jar拷贝到flume的plugins.d/flume-interceptor/lib目录
+    拷贝groovy-all-2.4.7.jar到flume的plugins.d/flume-interceptor/libext目录
+
+## Usage
+
     
+    a1.sources.r1.interceptors.i2.type = com.supermy.flume.interceptor.RuleFilteringInterceptor$Builder
+    a1.sources.r1.interceptors.i2.rule = /etc/flume/conf/g-filter.groovy
+    a1.sources.r1.interceptors.i2.ruleName = filterGroovy
     
-2016-12-16 完成flume 正则拦截器的替换
+    a1.sources.r1.interceptors.i3.type = com.supermy.flume.interceptor.RuleSearchAndReplaceInterceptor$Builder
+    a1.sources.r1.interceptors.i3.searchReplaceDsl = /etc/flume/conf/g-search-replace.groovy
+    a1.sources.r1.interceptors.i3.searchReplaceKey = searchReplaceGroovy
+    
+        
 
-Search and Replace Interceptor；--> RuleSearchAndReplaceInterceptor$Builder
-Regex Filtering Interceptor；  -->RuleFilteringInterceptor$Builder
-Regex Extractor Interceptor；-->RuleSearchAndReplaceInterceptor$Builder
----------------------filter dsl
-println head
-println body
+### g-filter.groovy
 
-return true
+过滤脚本，可以使用head and body 的数据作为条件 判定词条数据是否过滤
 
----------------------search replace dsl
-println head
-println body
-body=body.replace('a','aaa')
-head["newhead"]='abcd'
+```  groovy
 
-def resultMap = [:]
-
-resultMap["head"]=head
-resultMap["body"]=body
-
-return resultMap
+        println head
+        println body
+        
+        return true
+```
 
 
 
-a1.sources.r1.interceptors = i1 i2 i3
-a1.sources.r1.interceptors.i1.type = regex_extractor
-a1.sources.r1.interceptors.i1.regex = (.+):(.+):(.+):(.+)
-a1.sources.r1.interceptors.i1.serializers = s1 s2 s3 s4
-a1.sources.r1.interceptors.i1.serializers.s1.name = routing-key
-a1.sources.r1.interceptors.i1.serializers.s2.name = starttime
-a1.sources.r1.interceptors.i1.serializers.s3.name = endtime
-a1.sources.r1.interceptors.i1.serializers.s4.name = systime
+### g-search-replace.groovy
 
-#如果excludeEvents设为true，则表示过滤掉以lxw1234开头的events。
-#在使用 Regex Filtering Interceptor的时候一个属性是excludeEvents
-#当它的值为true 的时候，过滤掉匹配到当前正则表达式的一行
-#当它的值为false的时候，就接受匹配到正则表达式的一行
+替换脚本，可以更改head and body 的数据，适配不同的业务场景，脚本支持动态更新；
 
-#a1.sources.r1.interceptors = i2
-a1.sources.r1.interceptors.i2.type = com.supermy.flume.interceptor.RuleFilteringInterceptor$Builder
-#通过脚本的返回值，数据是否向下传递 参数 body / head(json 格式) 可以引用
-a1.sources.r1.interceptors.i2.rule = /etc/flume/conf/g-filter.groovy
-a1.sources.r1.interceptors.i2.ruleName = filterGroovy
+``` groovy
 
-a1.sources.r1.interceptors.i3.type = com.supermy.flume.interceptor.RuleSearchAndReplaceInterceptor$Builder
-#通过脚本的返回值，数据是否向下传递 参数 body / head(json 格式) 可以引用
-a1.sources.r1.interceptors.i3.searchReplaceDsl = /etc/flume/conf/g-search-replace.groovy
-a1.sources.r1.interceptors.i3.searchReplaceKey = searchReplaceGroovy
+        import  com.supermy.flume.interceptor.*
+        import javax.crypto.Cipher;
+        import javax.crypto.spec.SecretKeySpec;
+        
+        println head
+        println body
+        body=body.replace('a','aaa')
+        head["newhead"]='abcd'
+        
+        
+        
+        String text = "Body 的数据 , I Love BONC"
+        
+        //
+        def key = new SecretKeySpec("123456789987654321".bytes, "AES")
+        def c = Cipher.getInstance("AES")
+        
+        //加密
+        c.init(Cipher.ENCRYPT_MODE, key)
+        e_text = new String(Hex.encodeHex(c.doFinal(text.getBytes("UTF-8"))))
+        
+        //解密
+        c.init(Cipher.DECRYPT_MODE, key)
+        text1 = new String(c.doFinal(Hex.decodeHex(e_text.toCharArray())))
+        
+        println text
+        println e_text
+        println text1
+        
+        
+        def resultMap = [:]
+        
+        //加密数据，用于互联网数据传输
+        
+        
+        resultMap["head"]=head
+        resultMap["body"]=body
+        
+        return resultMap
 
-
-2016-12-14 完成拦截器项目的初始化
-自定义拦截器，通用的groovy 脚本语言作为规则语音。
+```
