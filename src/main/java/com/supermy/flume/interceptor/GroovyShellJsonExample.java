@@ -102,7 +102,7 @@ public class GroovyShellJsonExample {
                 //shell.setBinding(null);
                 scriptCache.put(cacheKey, shell);
             }
-        } catch (Throwable t) {
+        } catch (Exception t) {
             t.printStackTrace();
             //System.out.println("groovy script eval error. script: " + script, t);
         }
