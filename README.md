@@ -2,6 +2,10 @@
 
 [![Build Status](https://travis-ci.org/supermy/rule-interceptor.svg?branch=master)](https://github.com/supermy/rule-interceptor)
 
+##介绍
+
+可以数据采集端，利用采集设备的能力对数据进行非业务类 进行实时的 ETL 处理；适用于 hadoop 大数据生态的各种通道环境；特色是采用 groovy 作为规则语言，能够完成各种条件的处理。
+
 flume 全能版本拦截器 [flume-rule-interceptor](https://github.com/supermy/rule-interceptor). groovy 作为规则dsl,通过groovy 脚本编写逻辑，支持JSON 格式函数，脚本动态加载，灰度发布。
 
 业务场景1：RuleSearchAndReplaceInterceptor， 互联网算进行数据传输的安全，通过拦截器进行加密解密；官方原有的正则不能实现此功能。
