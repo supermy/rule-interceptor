@@ -1,20 +1,33 @@
 import  com.supermy.flume.interceptor.*
-
-import java.security.Key
+import javax.crypto.Cipher;
+import javax.crypto.spec.SecretKeySpec;
+import java.util.Base64;//jdk8
 
 println head
 println body
 body=body.replace('a','aaa')
 head["newhead"]='abcd'
 
-key = AESCoder.initSecretKey();
-Key k = AESCoder.toKey(key)
-enc = AESCoder.encrypt("abcd".getBytes(),k);
-dec = AESCoder.decrypt(enc);
 
-println "abcd"
-println enc
-println dec
+
+String text = "Body 的数据 , I Love BONC"
+
+//秘钥只能16位长度
+def key = new SecretKeySpec("1234567887654321".bytes, "AES")
+def c = Cipher.getInstance("AES")
+
+//加密
+c.init(Cipher.ENCRYPT_MODE, key)
+e_text = new String(Hex.encodeHex(c.doFinal(text.getBytes("UTF-8"))))
+
+//解密
+c.init(Cipher.DECRYPT_MODE, key)
+text1 = new String(c.doFinal(Hex.decodeHex(e_text.toCharArray())))
+
+println text
+println e_text
+println text1
+
 
 def resultMap = [:]
 
