@@ -1,7 +1,16 @@
 # key-switch
+2017-06-23
+    增加 gson 支持
+    search-replace 支持转换为 json 数据格式；
+    search-replace 支持转换为 redis-lua 脚本，支撑 flume-redis 通用组件。
+   
+    
 
 2017-06-21
     增加 redis pool 调用示例
+    在 IDE 直接运行脚本测试,再到 Flume 进行联调；
+    完成flume-groovy-redis联调；
+    
 2017-06-20
     加入 redis 支持，便于进行规则计算。
     可以整合 RocksDB涉及到 key 的计算；嵌入式，外部数据更新走 web 接口。todo

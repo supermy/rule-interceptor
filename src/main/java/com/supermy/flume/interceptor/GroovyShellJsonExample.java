@@ -76,11 +76,11 @@ public class GroovyShellJsonExample {
 
             Script shell = null;
             if (scriptCache.containsKey(cacheKey)) {
-                System.out.println("===============scriptCache:"+cacheKey);
+                //System.out.println("===============scriptCache:"+cacheKey);
 
                 shell = (Script) scriptCache.get(cacheKey);
             } else {
-                System.out.println("===============");
+                //System.out.println("===============");
                 shell = new GroovyShell().parse(f);
                 scriptCache.put(cacheKey, shell);
 

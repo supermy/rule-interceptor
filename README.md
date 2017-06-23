@@ -16,6 +16,7 @@ flume 全能版本拦截器 [flume-rule-interceptor](https://github.com/supermy/
 
 业务场景3：RuleSearchAndReplaceInterceptor，定制head 属性，可以通过groovy 脚本配置head 属性；官方配置较为复杂，不能支持灵活业务。
 
+[new]业务场景4：支持内容过滤；支持将内容转换为 redis-lua 支持的脚本，支持 flume-redis 组件进行数据处理。
 
 ## Install
 
@@ -43,10 +44,35 @@ flume 全能版本拦截器 [flume-rule-interceptor](https://github.com/supermy/
 
 ```  groovy
 
-        println head
-        println body
-        
-        return true
+    //#当它的值为true 的时候，过滤掉匹配到当前正则表达式的一行
+    //#当它的值为false的时候，就接受匹配到正则表达式的一行
+    println "netuser filter"
+    //println head
+    //println body
+    body = "20170621162925,113.225.23.151,test_10056368,1"
+    //body = "20170621162925,113.225.23.152,test_10056368,3"
+    
+    def split = body.split(",")
+    
+    println split.size()
+    
+    if(split.size()<4){
+        //数据不合格过滤
+        return false;
+    }
+    
+    def type = split[3]
+    
+    println type.getClass()
+    println type.substring(0,1) == '1'
+    //println type.toInteger() == 1
+    
+    if (type.substring(0,1) == '1' || type.substring(0,1) == '2') {
+        return true;  //不过滤
+    } else {
+        return false; //过滤
+    }
+
 ```
 
 
@@ -55,7 +81,7 @@ flume 全能版本拦截器 [flume-rule-interceptor](https://github.com/supermy/
 
 替换脚本，可以更改head and body 的数据，适配不同的业务场景，脚本支持动态更新；
 
-``` groovy
+``` groovy 加密场景
 
         import  com.supermy.flume.interceptor.*
         import javax.crypto.Cipher;
@@ -96,5 +122,65 @@ flume 全能版本拦截器 [flume-rule-interceptor](https://github.com/supermy/
         resultMap["body"]=body
         
         return resultMap
+
+```
+
+``` groovy redis-lua 场景
+
+    import com.google.gson.Gson
+    
+    //数据加工为 lua 脚本，插入到 redis
+    println "netuser redis script 准备"
+    //println head
+    //println body
+    
+    //body = "20170621162925,113.225.23.151,test_10056368,1"
+    body = "20170621162925,113.225.23.152,test_10056368,2"
+    // eval "return redis.call('ZADD','KEYS[1]',ARGV[1],ARGV[2])" 1 keyset   123  u123
+    
+    
+    
+    def split = body.split(",")
+    
+    
+    
+    def type = split[3]
+    if (type.substring(0,1) == '1') {
+        split[2]=split[2]+"@Start";
+    } else {
+        split[2]=split[2]+"@End";
+    }
+    
+    Gson gson = new Gson();
+    
+    Map full= new HashMap();
+    full.put("script","return redis.call('ZADD',KEYS[2],KEYS[1],KEYS[3])");
+    full.put("args",new ArrayList());
+    full.put("keys",split);
+    
+    String json = gson.toJson(full);
+    println json
+    
+    Map m=gson.fromJson(json, HashMap.class);
+    println m
+    
+    
+    //StringBuffer sb = new StringBuffer("return redis.call('ZADD','");
+    //
+    //sb.append(split[1]).append("',").append(split[0]).append(",'").append(split[2]);
+    //if (type.substring(0,1) == '1') {
+    //    sb.append("@Start'");
+    //} else {
+    //    sb.append("@End'");
+    //}
+    //sb.append(")");
+    //println sb
+    
+    def resultMap = [:]
+    
+    resultMap["head"] = head
+    resultMap["body"] = json
+    
+    return resultMap
 
 ```

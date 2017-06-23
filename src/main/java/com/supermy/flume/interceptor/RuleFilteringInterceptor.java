@@ -137,11 +137,11 @@ public class RuleFilteringInterceptor implements Interceptor {
         binding.setVariable("body", new String(event.getBody()));
         binding.setVariable("head", event.getHeaders());
 
-        System.out.println(String.format(
+        logger.debug(String.format(
                 "flume 的值:  body=%s,head=%s",
                 new String(event.getBody()), event.getHeaders()));
 
-        System.out.println(String.format(
+        logger.debug(String.format(
                 "flume 配置参数:  rule=%s,rulename=%s",
                 rule, rulename));
 
