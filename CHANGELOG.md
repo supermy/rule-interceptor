@@ -1,8 +1,41 @@
 # key-switch
+
+2017-06-24
+
+1.^A 的实际编码为\001 ；如何把文件中的tab分隔符CRTL+A,也就是\001,换成 tab分隔符?
+
+    PIG中输入输出分隔符默认是制表符\t，而到了hive中，默认变成了八进制的\001， 也就是ASCII： 
+    
+    sed 's/\o001/\t/g' yourfile 
+    tr '\001' '\t' < yourfile
+    
+    
+
 2017-06-23
-    增加 gson 支持
+
+增加 gson 支持
+
     search-replace 支持转换为 json 数据格式；
     search-replace 支持转换为 redis-lua 脚本，支撑 flume-redis 通用组件。
+    
+在凌晨1点-4点进行数据清理;保留4天的数据
+    
+        
+    StringBuffer sb1 = new StringBuffer("redis.call('ZADD',KEYS[2],KEYS[1],KEYS[3]);");
+    
+    //println curhour
+    //凌晨进行数据清理 0-4点
+    String curhour = new Date().format('HH')
+    if (curhour.toInteger() >= 0 && curhour.toInteger() <= 4) {
+    
+        sb1.append("redis.call('ZREMRANGEBYSCORE',KEYS[2],0,KEYS[4])");
+    
+        Calendar date = Calendar.getInstance();
+        date.set(Calendar.DATE, date.get(Calendar.DATE) - 7);
+        println date.format('yyyyMMddHHmmss')
+        split = Arrays.copyOf(split, split.length + 1);
+        split[4] = date.format('yyyyMMddHHmmss');
+    }
    
     
 
