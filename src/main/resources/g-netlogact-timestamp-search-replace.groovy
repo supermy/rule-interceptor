@@ -5,7 +5,7 @@ import java.text.SimpleDateFormat
 //println head
 //println body
 
-body = "221.200.83.69|20170624112313|syl_06641413"
+body = "221.200.83.69|20170624112313|my_19780808"
 
 def split = body.split("\\|")
 
@@ -24,6 +24,6 @@ head["timestamp"]=cur.getTime();
 def resultMap = [:]
 
 resultMap["head"] = head
-resultMap["body"] = json
+resultMap["body"] = body
 
 return resultMap
