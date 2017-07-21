@@ -28,7 +28,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.*;
 
 import static com.supermy.flume.interceptor.RuleFilteringInterceptor.Constants.*;
 
@@ -103,6 +105,9 @@ public class RuleFilteringInterceptor implements Interceptor {
 
     private final boolean excludeEvents;
 
+    private ExecutorService executorService = null;
+    private int threadNum = 10;
+    private int threadPool = 100;
     /**
      * Only {@link RuleFilteringInterceptor.Builder} can build me
      */
@@ -116,6 +121,8 @@ public class RuleFilteringInterceptor implements Interceptor {
     @Override
     public void initialize() {
         // no-op
+        executorService = Executors.newFixedThreadPool(threadNum);
+
     }
 
 
@@ -174,19 +181,59 @@ public class RuleFilteringInterceptor implements Interceptor {
      */
     @Override
     public List<Event> intercept(List<Event> events) {
+        long s=System.currentTimeMillis();
+
         List<Event> out = Lists.newArrayList();
-        for (Event event : events) {
-            Event outEvent = intercept(event);
+
+        List<Future<Event>> results = new ArrayList<Future<Event>>();
+
+        for (final Event event : events) {
+            Future<Event> future = executorService.submit(new Callable<Event>() {
+                @Override
+                public Event call() {
+                    return intercept(event);
+                }
+            });
+
+            results.add(future);
+        }
+
+        for (Future<Event> future:results) {
+            Event outEvent = null;
+            try {
+                outEvent = future.get();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            } catch (ExecutionException e) {
+                e.printStackTrace();
+            }
+
             if (outEvent != null) {
                 out.add(outEvent);
             }
         }
+
+        long e=System.currentTimeMillis();
+
+        logger.info("{}个线程，过滤拦截器处理数据{}",results.size(),events.size());
+        logger.info("每秒过滤拦截器处理数据{}",out.size()/(e-s)/1000);
+
+
+//        for (Event event : events) {
+//            Event outEvent = intercept(event);
+//            if (outEvent != null) {
+//                out.add(outEvent);
+//            }
+//        }
+
         return out;
     }
 
     @Override
     public void close() {
         // no-op
+        executorService.shutdown();
+
     }
 
     /**

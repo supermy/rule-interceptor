@@ -22,17 +22,41 @@ if(split.size()<4){
 }
 
 
-//非法 IP 地址过滤掉
-String ip = "^(1\\d{2}|2[0-4]\\d|25[0-5]|[1-9]\\d|[1-9])\\.(00?\\d|1\\d{2}|2[0-4]\\d|25[0-5]|[1-9]\\d|\\d)\\.(00?\\d|1\\d{2}|2[0-4]\\d|25[0-5]|[1-9]\\d|\\d)\\.(00?\\d|1\\d{2}|2[0-4]\\d|25[0-5]|[1-9]\\d|\\d)\$"
-Pattern pattern = Pattern.compile(ip);
-Matcher matcher = pattern.matcher(split[1]);
-if(!matcher.matches()){
-    //数据不合格过滤 网络日志数据至少有4列
-    println '非法IP';
+////非法 IP 地址过滤掉
+//String ip = "^(1\\d{2}|2[0-4]\\d|25[0-5]|[1-9]\\d|[1-9])\\.(00?\\d|1\\d{2}|2[0-4]\\d|25[0-5]|[1-9]\\d|\\d)\\.(00?\\d|1\\d{2}|2[0-4]\\d|25[0-5]|[1-9]\\d|\\d)\\.(00?\\d|1\\d{2}|2[0-4]\\d|25[0-5]|[1-9]\\d|\\d)\$"
+//Pattern pattern = Pattern.compile(ip);
+//Matcher matcher = pattern.matcher(split[1]);
+//if(!matcher.matches()){
+//    //数据不合格过滤 网络日志数据至少有4列
+//    println '非法IP';
+//    return false;
+//}
+
+//非法日期
+String curdate = split[0].split("\\.")[0]
+String curstr = curdate.replaceAll(":","").replaceAll("-","").replaceAll(" ","");
+
+println curstr
+
+//3daybefore 系统时间
+Calendar date = Calendar.getInstance();
+//date.set(Calendar.DATE, date.get(Calendar.DATE) - 1);
+//date.add(Calendar.DATE,-1);//1天谴
+date.add(Calendar.HOUR_OF_DAY,-1);//1个小时之前
+//date.add(Calendar.MINUTE, -1);//1分钟前
+
+cur3daytime = date.format('yyyyMMddHHmmss')
+
+println cur3daytime
+
+//3daybefore
+if (cur3daytime > curstr){
+    println "data time drop"；
     return false;
 }
 
-//非法日期
+
+
 
 
 //第一个 IP 地址作为终端 IP

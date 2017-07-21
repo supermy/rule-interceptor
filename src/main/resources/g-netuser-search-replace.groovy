@@ -34,7 +34,7 @@ StringBuffer sb1 = new StringBuffer("redis.call('ZADD',KEYS[2],KEYS[1],KEYS[3]);
 //println curhour
 //凌晨进行数据清理 0-4点
 String curhour = new Date().format('HH')
-if (curhour.toInteger() >= 0 && curhour.toInteger() <= 4) {
+//if (curhour.toInteger() >= 0 && curhour.toInteger() <= 4) {
 
     sb1.append("redis.call('ZREMRANGEBYSCORE',KEYS[2],0,KEYS[4])");
 
@@ -43,7 +43,7 @@ if (curhour.toInteger() >= 0 && curhour.toInteger() <= 4) {
     println date.format('yyyyMMddHHmmss')
     split = Arrays.copyOf(split, split.length + 1);
     split[4] = date.format('yyyyMMddHHmmss');
-}
+//}
 
 
 Gson gson = new Gson();

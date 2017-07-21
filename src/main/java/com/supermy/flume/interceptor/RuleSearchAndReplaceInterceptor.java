@@ -19,6 +19,7 @@ package com.supermy.flume.interceptor;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 import groovy.lang.Binding;
 import org.apache.commons.lang.StringUtils;
 import org.apache.flume.Context;
@@ -28,9 +29,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -88,6 +92,11 @@ public class RuleSearchAndReplaceInterceptor implements Interceptor {
 //    this.replaceString = replaceString;
 //    this.charset = charset;
 //  }
+
+  private ExecutorService executorService = null;
+  private int threadNum = 10;
+  private int threadPool = 100;
+
 private RuleSearchAndReplaceInterceptor(String searchReplaceKey,String searchReplaceDsl,
                                         Charset charset) {
   this.searchReplaceKey=searchReplaceKey;
@@ -98,10 +107,16 @@ private RuleSearchAndReplaceInterceptor(String searchReplaceKey,String searchRep
 
   @Override
   public void initialize() {
+    executorService = Executors.newFixedThreadPool(threadNum);
+//    executorService = Executors.newFixedThreadPool(threadPool);
+    //executorService = Executors.newCachedThreadPool();
+
   }
 
   @Override
   public void close() {
+    executorService.shutdown();
+
   }
 
 //  @Override
@@ -139,10 +154,45 @@ private RuleSearchAndReplaceInterceptor(String searchReplaceKey,String searchRep
 
   @Override
   public List<Event> intercept(List<Event> events) {
-    for (Event event : events) {
-      intercept(event);
+    //todo
+    long s=System.currentTimeMillis();
+
+    List<Event> out = Lists.newArrayList();
+
+    List<Future<Event>> results = new ArrayList<Future<Event>>();
+
+    for (final Event event : events) {
+      Future<Event> future = executorService.submit(new Callable<Event>() {
+        @Override
+        public Event call() {
+          return intercept(event);
+        }
+      });
+
+      results.add(future);
     }
-    return events;
+
+    for (Future<Event> future:results) {
+
+      Event event = null;
+      try {
+        event = future.get();
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      } catch (ExecutionException e) {
+        e.printStackTrace();
+      }
+      out.add(event);
+
+    }
+
+    long e=System.currentTimeMillis();
+
+    logger.info("{}个线程，过滤拦截器处理数据{}",results.size(),events.size());
+    logger.info("每秒过滤拦截器处理数据{}",out.size()/(e-s)/1000);
+
+//    return events;
+    return out;
   }
 
   public static class Builder implements Interceptor.Builder {
