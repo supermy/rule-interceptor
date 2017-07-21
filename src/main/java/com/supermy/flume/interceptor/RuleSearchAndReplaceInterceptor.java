@@ -97,11 +97,12 @@ public class RuleSearchAndReplaceInterceptor implements Interceptor {
   private int threadNum = 10;
   private int threadPool = 100;
 
-private RuleSearchAndReplaceInterceptor(String searchReplaceKey,String searchReplaceDsl,
-                                        Charset charset) {
+private RuleSearchAndReplaceInterceptor(String searchReplaceKey, String searchReplaceDsl,
+                                        Charset charset, int threadNum) {
   this.searchReplaceKey=searchReplaceKey;
   this.searchReplaceDsl=searchReplaceDsl;
   this.charset = charset;
+  this.threadNum = threadNum;
 }
 
 
@@ -203,8 +204,11 @@ private RuleSearchAndReplaceInterceptor(String searchReplaceKey,String searchRep
     private static final String SEARCH_REPLACE_DSL = "searchReplaceDsl";
     private static final String CHARSET_KEY = "charset";
 
+    private static final String THREAD_NUM = "threadNum";
+
     private  String searchReplaceKey;
     private  String searchReplaceDsl;
+    private  int threadNum = 10;
 
 //    private Pattern searchRegex;
 //    private String replaceString;
@@ -212,7 +216,12 @@ private RuleSearchAndReplaceInterceptor(String searchReplaceKey,String searchRep
 
     @Override
     public void configure(Context context) {
+
+
       searchReplaceKey = context.getString(SEARCH_REPLACE_KEY);
+
+
+
       Preconditions.checkArgument(!StringUtils.isEmpty(searchReplaceKey),
           "Must supply a valid search pattern " + SEARCH_REPLACE_KEY +
           " (may not be empty)");
@@ -223,6 +232,7 @@ private RuleSearchAndReplaceInterceptor(String searchReplaceKey,String searchRep
           " (empty is ok)");
 
 //      searchRegex = Pattern.compile(searchPattern);
+      threadNum = context.getInteger(THREAD_NUM);
 
       if (context.containsKey(CHARSET_KEY)) {
         // May throw IllegalArgumentException for unsupported charsets.
@@ -236,7 +246,7 @@ private RuleSearchAndReplaceInterceptor(String searchReplaceKey,String searchRep
                                  "searchReplaceKey required");
       Preconditions.checkNotNull(searchReplaceDsl,
                                  "searchReplaceDsl required");
-      return new RuleSearchAndReplaceInterceptor(searchReplaceKey, searchReplaceDsl, charset);
+      return new RuleSearchAndReplaceInterceptor(searchReplaceKey, searchReplaceDsl, charset,threadNum);
     }
   }
 }

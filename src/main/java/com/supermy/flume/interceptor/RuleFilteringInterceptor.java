@@ -111,11 +111,12 @@ public class RuleFilteringInterceptor implements Interceptor {
     /**
      * Only {@link RuleFilteringInterceptor.Builder} can build me
      */
-    private RuleFilteringInterceptor(String rule, String rulename, boolean excludeEvents) {
+    private RuleFilteringInterceptor(String rule, String rulename, boolean excludeEvents, int threadNum) {
 
         this.rule = rule;
         this.rulename = rulename;
         this.excludeEvents = excludeEvents;
+        this.threadNum = threadNum;
     }
 
     @Override
@@ -249,11 +250,14 @@ public class RuleFilteringInterceptor implements Interceptor {
         private String rule;
         private String rulename;
         private boolean excludeEvents;
+        private  int threadNum = 10;
+        private static final String THREAD_NUM = "threadNum";
 
         @Override
         public void configure(Context context) {
             String ruleString = context.getString(RULE, DEFAULT_RULE);
             String ruleNameString = context.getString(RULE_NAME, DEFAUNLT_RULE_NAME);
+            threadNum = context.getInteger(THREAD_NUM);
 
             //rule = Pattern.compile(ruleString); //// TODO: 16/12/14  groovy 脚本替换
             rule = ruleString;
@@ -268,7 +272,7 @@ public class RuleFilteringInterceptor implements Interceptor {
             logger.info(String.format(
                     "Creating RegexFilteringInterceptor: rule=%s,rulename=%s,excludeEvents=%s",
                     rule, rulename, excludeEvents));
-            return new RuleFilteringInterceptor(rule, rulename, excludeEvents);
+            return new RuleFilteringInterceptor(rule, rulename, excludeEvents,threadNum);
         }
     }
 
