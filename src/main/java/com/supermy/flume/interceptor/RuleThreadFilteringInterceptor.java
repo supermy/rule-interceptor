@@ -28,7 +28,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.supermy.flume.interceptor.RuleFilteringInterceptor.Constants.*;
 
@@ -93,34 +96,42 @@ import static com.supermy.flume.interceptor.RuleFilteringInterceptor.Constants.*
  * </code>
  *
  */
-public class RuleFilteringInterceptor implements Interceptor {
+public class RuleThreadFilteringInterceptor implements Interceptor {
 
     private static final Logger logger = LoggerFactory
-            .getLogger(RuleFilteringInterceptor.class);
+            .getLogger(RuleThreadFilteringInterceptor.class);
 
     private final String rule; //groovy file
     private final String rulename;
+    private File f ;
 
     private final boolean excludeEvents;
-    private File f;
 
+    private ExecutorService executorService = null;
+    private int threadNum = 10;
+    private int threadPool = 100;
     /**
-     * Only {@link RuleFilteringInterceptor.Builder} can build me
+     * Only {@link RuleThreadFilteringInterceptor.Builder} can build me
      */
-    private RuleFilteringInterceptor(String rule, String rulename, boolean excludeEvents) {
+    private RuleThreadFilteringInterceptor(String rule, String rulename, boolean excludeEvents, int threadNum, int threadPool) {
 
         this.rule = rule;
         this.rulename = rulename;
         this.excludeEvents = excludeEvents;
-        this.f =new File(rule);
+        this.threadNum = threadNum;
+        this.threadPool = threadPool;
+
+        f =new File(rule); //规则定期更新 fixme
 
     }
 
     @Override
     public void initialize() {
-        this.f =new File(rule);
-
         // no-op
+//        executorService = Executors.newFixedThreadPool(threadNum);
+        executorService = Executors.newFixedThreadPool(threadPool);
+        f =new File(rule); //规则定期更新 fixme
+
     }
 
 
@@ -137,18 +148,28 @@ public class RuleFilteringInterceptor implements Interceptor {
         // excludeRegex are defined.
         // 调用脚本规则进行判定 groovy
 
+        //输入参数
+        boolean result=true;
+        try {
+            Binding binding = new Binding();
+            binding.setVariable("body", new String(event.getBody()));
+            binding.setVariable("head", event.getHeaders());
+
+            logger.debug(String.format(
+                    "flume 的值:  body=%s,head=%s",
+                    new String(event.getBody()), event.getHeaders()));
+
+            logger.debug(String.format(
+                    "flume 配置参数:  rule=%s,rulename=%s",
+                    rule, rulename));
+
+//        File f =new File(rule); //规则可以定期更新  提升性能
+            result = (Boolean) GroovyShellJsonExample.getShell(rulename+f.lastModified(), f, binding);
 
 
-        logger.debug(String.format(
-                "flume 的值:  body=%s,head=%s",
-                new String(event.getBody()), event.getHeaders()));
-
-        logger.debug(String.format(
-                "flume 配置参数:  rule=%s,rulename=%s",
-                rule, rulename));
-
-//        File f =new File(rule);
-        boolean result = (Boolean) GroovyShellJsonExample.getShell1(rulename+f.lastModified(), f, event);
+        } catch (Exception e){
+            e.printStackTrace();
+        }
 
         if (!excludeEvents) {
             //if (regex.matcher(new String(event.getBody())).find()) {// TODO: 16/12/14
@@ -176,19 +197,62 @@ public class RuleFilteringInterceptor implements Interceptor {
      */
     @Override
     public List<Event> intercept(List<Event> events) {
+
+        long s=System.currentTimeMillis();
+
+        final AtomicInteger ai = new AtomicInteger(0);
+
+        List<Future<Event>> results = new ArrayList<Future<Event>>();
+
+        for (final Event event : events) {
+            Future<Event> future = executorService.submit(new Callable<Event>() {
+                @Override
+                public Event call() {
+                    ai.incrementAndGet();
+                    return intercept(event);
+                }
+            });
+
+            results.add(future);
+        }
+
         List<Event> out = Lists.newArrayList();
-        for (Event event : events) {
-            Event outEvent = intercept(event);
+        for (Future<Event> future:results) {
+            Event outEvent = null;
+            try {
+                outEvent = future.get();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            } catch (ExecutionException e) {
+                e.printStackTrace();
+            }
+
             if (outEvent != null) {
                 out.add(outEvent);
             }
         }
+
+        long e=System.currentTimeMillis();
+
+        logger.info("filters:{}个线程，过滤拦截器处理数据{}",Thread.activeCount(),ai.intValue());
+        logger.info("filters:每秒过滤拦截器处理数据{}",ai.intValue()/((e-s)/1000));
+        logger.info("filters:每秒过滤拦截器处理数据{}",out.size()/((e-s)/1000));
+
+
+//        for (Event event : events) {
+//            Event outEvent = intercept(event);
+//            if (outEvent != null) {
+//                out.add(outEvent);
+//            }
+//        }
+
         return out;
     }
 
     @Override
     public void close() {
         // no-op
+        executorService.shutdown();
 
     }
 
@@ -205,11 +269,18 @@ public class RuleFilteringInterceptor implements Interceptor {
         private String rule;
         private String rulename;
         private boolean excludeEvents;
+        private  int threadNum = 10;
+        private  int threadPool = 100;
+        private static final String THREAD_NUM = "threadNum";
+        private static final String THREAD_POOL= "threadPool";
 
         @Override
         public void configure(Context context) {
             String ruleString = context.getString(RULE, DEFAULT_RULE);
             String ruleNameString = context.getString(RULE_NAME, DEFAUNLT_RULE_NAME);
+
+            threadNum = context.getInteger(THREAD_NUM,10);
+            threadPool = context.getInteger(THREAD_POOL,100);
 
             //rule = Pattern.compile(ruleString); //// TODO: 16/12/14  groovy 脚本替换
             rule = ruleString;
@@ -224,7 +295,7 @@ public class RuleFilteringInterceptor implements Interceptor {
             logger.info(String.format(
                     "Creating RegexFilteringInterceptor: rule=%s,rulename=%s,excludeEvents=%s",
                     rule, rulename, excludeEvents));
-            return new RuleFilteringInterceptor(rule, rulename, excludeEvents);
+            return new RuleThreadFilteringInterceptor(rule, rulename, excludeEvents,threadNum,threadPool);
         }
     }
 

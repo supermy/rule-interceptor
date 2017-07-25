@@ -15,6 +15,6 @@ assert object.name == 'James Mo';
 println p1;
 println p2;
 
-
+//output = "Hello ${input}";
 
 return object.name == 'James Mo';

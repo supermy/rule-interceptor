@@ -4,6 +4,7 @@ import java.util.regex.Pattern
 
 //#当它的值为false 的时候，过滤掉匹配到当前正则表达式的一行
 //#当它的值为true的时候，就接受匹配到正则表达式的一行
+long s=System.currentTimeMillis();
 
 println "netlog filter"
 //println head
@@ -33,27 +34,27 @@ if(split.size()<4){
 //}
 
 //非法日期
-String curdate = split[0].split("\\.")[0]
-String curstr = curdate.replaceAll(":","").replaceAll("-","").replaceAll(" ","");
-
-println curstr
-
-//3daybefore 系统时间
-Calendar date = Calendar.getInstance();
-//date.set(Calendar.DATE, date.get(Calendar.DATE) - 1);
-//date.add(Calendar.DATE,-1);//1天谴
-date.add(Calendar.HOUR_OF_DAY,-1);//1个小时之前
-//date.add(Calendar.MINUTE, -1);//1分钟前
-
-cur3daytime = date.format('yyyyMMddHHmmss')
-
-println cur3daytime
-
-//3daybefore
-if (cur3daytime > curstr){
-    println "data time drop"；
-    return false;
-}
+//String curdate = split[0].split("\\.")[0]
+//String curstr = curdate.replaceAll(":","").replaceAll("-","").replaceAll(" ","");
+//
+//println curstr
+//
+////3daybefore 系统时间
+//Calendar date = Calendar.getInstance();
+////date.set(Calendar.DATE, date.get(Calendar.DATE) - 1);
+////date.add(Calendar.DATE,-1);//1天谴
+//date.add(Calendar.HOUR_OF_DAY,-1);//1个小时之前
+////date.add(Calendar.MINUTE, -1);//1分钟前
+//
+//cur3daytime = date.format('yyyyMMddHHmmss')
+//
+//println cur3daytime
+//
+////3daybefore
+//if (cur3daytime > curstr){
+//    println "data time drop";
+//    return false;
+//}
 
 
 
@@ -61,6 +62,10 @@ if (cur3daytime > curstr){
 
 //第一个 IP 地址作为终端 IP
 def type = split[1]
+
+long e=System.currentTimeMillis();
+
+println(e-s)
 
 if (type.substring(0,2) != '10') {
     return true;  //不过滤

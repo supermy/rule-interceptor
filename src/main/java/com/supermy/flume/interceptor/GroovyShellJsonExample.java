@@ -5,11 +5,18 @@ package com.supermy.flume.interceptor;
  */
 
 import groovy.lang.Binding;
+import groovy.lang.GroovyClassLoader;
 import groovy.lang.GroovyShell;
 import groovy.lang.Script;
+import groovy.util.GroovyScriptEngine;
+import groovy.util.ResourceException;
+import groovy.util.ScriptException;
+import org.apache.flume.Event;
+import org.codehaus.groovy.control.CompilerConfiguration;
 import org.codehaus.groovy.runtime.InvokerHelper;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -22,14 +29,19 @@ import java.util.concurrent.ConcurrentHashMap;
  * static Map<String, Object> scriptCache = new ConcurrentHashMap<String, Object>();
  */
 public class GroovyShellJsonExample {
-    static Map<String, Object> scriptCache = new ConcurrentHashMap<String, Object>();
+    private static Map<String, Object> scriptCache = new ConcurrentHashMap<String, Object>();
+    private static Map<String, Class> scriptCache1 = new ConcurrentHashMap<String, Class>();
 
     public static void main(String args[]) {
-
+//        execDsl();
 //        oral();
         //JSON 的测试例子
+        String scriptname = "jsontest";
+        String script = "/Users/moyong/project/env-myopensource/3-tools/flume-rule-interceptor/src/main/resources/hello.groovy";
+//                File script = new ClassPathResource("hello.groovy").getFile();
+        File f = new File(script);
         int i = 0;
-        while (true) {
+        while (i<=100) {
             i++;
             String json = "{ \"name\": \"James Mo\" }";
             Binding binding = new Binding();
@@ -40,10 +52,7 @@ public class GroovyShellJsonExample {
             try {
 //            String script = "println\"Welcome to $language\"; y = x * 2; z = x * 3; return x ";
 //            Object hello = GroovyShellJsonExample.getShell("hello", script, binding);
-                String scriptname = "jsontest";
-                String script = "/Users/moyong/project/env-myopensource/3-tools/flume-rule-interceptor/src/main/resources/hello.groovy";
-//                File script = new ClassPathResource("hello.groovy").getFile();
-                File f = new File(script);
+
 
                 System.out.println("f.lastModified():"+f.lastModified());
 
@@ -74,33 +83,87 @@ public class GroovyShellJsonExample {
         try {
 
 
-            Script shell = null;
-            if (scriptCache.containsKey(cacheKey)) {
-                //System.out.println("===============scriptCache:"+cacheKey);
+            Class<Script>  scriptClass = null;
+                if (scriptCache1.containsKey(cacheKey)) {
+                    //System.out.println("===============scriptCache:"+cacheKey);
 
-                shell = (Script) scriptCache.get(cacheKey);
-            } else {
-                //System.out.println("===============");
-                shell = new GroovyShell().parse(f);
-                scriptCache.put(cacheKey, shell);
+                    scriptClass = scriptCache1.get(cacheKey);
+                } else {
+                    //System.out.println("===============");
+                    CompilerConfiguration config = new CompilerConfiguration(CompilerConfiguration.DEFAULT);
+                    GroovyClassLoader groovyClassLoader = new GroovyClassLoader(Thread.currentThread().getContextClassLoader(),config);
+//                    GroovyClassLoader groovyClassLoader = new GroovyClassLoader();
+                    scriptClass = groovyClassLoader.parseClass(f);
+                    Script groovyScript = scriptClass.newInstance();
 
-//                shell = cache(cacheKey, script);
-            }
 
-            //shell.setBinding(binding);
-            //scriptObject = (Object) shell.run();
+                }
 
-            scriptObject = (Object) InvokerHelper.createScript(shell.getClass(), binding).run();
+
+            Script script = InvokerHelper.createScript(scriptClass, binding);
+            scriptObject =  script.run();
 
 
             // clear
             binding.getVariables().clear();
             binding = null;
 
-            // Cache
-            if (!scriptCache.containsKey(cacheKey)) {
+            if (!scriptCache1.containsKey(cacheKey)) {
                 //shell.setBinding(null);
-                scriptCache.put(cacheKey, shell);
+                scriptCache1.put(cacheKey, scriptClass);
+            }
+        } catch (Exception t) {
+            t.printStackTrace();
+            //System.out.println("groovy script eval error. script: " + script, t);
+        }
+
+        return scriptObject;
+    }
+
+
+    public static Object getShell1(String cacheKey, File f, Event event) {
+
+        Object scriptObject = null;
+        try {
+
+
+            Class<Script>  scriptClass = null;
+            if (scriptCache1.containsKey(cacheKey)) {
+                //System.out.println("===============scriptCache:"+cacheKey);
+
+                scriptClass = scriptCache1.get(cacheKey);
+            } else {
+                //System.out.println("===============");
+                CompilerConfiguration config = new CompilerConfiguration(CompilerConfiguration.DEFAULT);
+//                config.getOptimizationOptions().put("indy", true);
+//                config.getOptimizationOptions().put("int", false);
+//                GroovyShell shell = new GroovyShell(config);
+
+                config.setScriptBaseClass(Script.class.getName());
+                GroovyClassLoader groovyClassLoader = new GroovyClassLoader(Thread.currentThread().getContextClassLoader(),config);
+//                    GroovyClassLoader groovyClassLoader = new GroovyClassLoader();
+                scriptClass = groovyClassLoader.parseClass(f);
+//                Script groovyScript = scriptClass.newInstance();
+
+
+            }
+
+            //输入参数
+            Binding binding = new Binding();
+            binding.setVariable("body", new String(event.getBody()));
+            binding.setVariable("head", event.getHeaders());
+
+            Script script = InvokerHelper.createScript(scriptClass, binding);
+            scriptObject =  script.run();
+
+
+            // clear
+            binding.getVariables().clear();
+            binding = null;
+
+            if (!scriptCache1.containsKey(cacheKey)) {
+                //shell.setBinding(null);
+                scriptCache1.put(cacheKey, scriptClass);
             }
         } catch (Exception t) {
             t.printStackTrace();
@@ -130,5 +193,32 @@ public class GroovyShellJsonExample {
         assert binding.getVariable("y").equals(20);
 
         assert binding.getVariable("z").equals(30);
+    }
+
+    public static void execDsl()  {
+
+        String path = "/Users/moyong/project/env-myopensource/3-tools/flume-rule-interceptor/src/main/resources/";
+
+        GroovyScriptEngine gse = null;
+        try {
+            gse = new GroovyScriptEngine(path);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        Binding binding = new Binding();
+
+        binding.setVariable("input", "Groovy");
+
+        try {
+            gse.run("hello.groovy", binding);
+        } catch (ResourceException e) {
+            e.printStackTrace();
+        } catch (ScriptException e) {
+            e.printStackTrace();
+        }
+
+        System.out.println(binding.getVariable("output"));
+
     }
 }
